@@ -21,21 +21,35 @@ cd ../
 
 ### Download audio files
 
-Whisper.cpp requires as an input 16-bit WAV audio files. To convert your input audio files to 16-bit WAV format you can use `ffmpeg` like this:
+Whisper.cpp requires as an input 16-bit WAV audio files.
+By default, a sample `jfk.wav` file is included in the whisper image. This can be used to test with.
+To convert your input audio files to 16-bit WAV format you can use `ffmpeg` like this:
 
 ```bash
 ffmpeg -i <input.mp3> -ar 16000 -ac 1 -c:a pcm_s16le <output.wav>
 ```
 
-Make sure to download your audio files in your `Local/path/to/locallm/models` folder.
+The environment variable `AUDIO_FILE` can be passed to override the default `/app/jfk.wav` file within the whisper image.
 
 ### Deploy Model
 
 Deploy the LLM and volume mount the model of choice.
+Here we are mounting the `ggml-small.bin` modedl downloaded above.
+
+To test with the included `/app/jfk.wav` audio file:
 
 ```bash
 podman run --rm -it \
-        -v Local/path/to/locallm/models:/models:Z \
-        -e AUDIO_FILE=/models/<audio-filename>
+        -v /local/path/to/locallm/models/ggml-small.bin:/models/ggml-small.bin:Z,ro \
+        whisper:image
+```
+
+To run with another audio file:
+
+```bash
+podman run --rm -it \
+        -v /local/path/to/locallm/models/ggml-small.bin:/models/ggml-small.bin:Z,ro \
+        -v /local/path/to/<audio-file.wav>:/app/<audio-file.wav>:Z,ro \
+        -e AUDIO_FILE=/app/<audio-file.wav>
         whisper:image
 ```

@@ -1,14 +1,23 @@
-FROM quay.io/centos/centos:stream8
+FROM registry.access.redhat.com/ubi9/ubi:latest as builder
+
 WORKDIR /app
-RUN dnf install -y make gcc gcc-c++ git && \
-  rm -rf /var/cache/dnf/*
-RUN git clone https://github.com/hemajv/whisper.cpp.git . && \
-    make
-USER root
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
-        https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm \ 
-        https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm \
-        https://rpmfind.net/linux/centos/8-stream/PowerTools/aarch64/os/Packages/SDL2-2.0.10-2.el8.aarch64.rpm && \
-    dnf install -y ffmpeg curl
+RUN dnf install -y git make gcc gcc-c++
+RUN mkdir whisper && cd whisper && git clone https://github.com/ggerganov/whisper.cpp.git . && \
+    git checkout tags/v1.5.4 && \
+    make && \
+    cp main /app/main && \
+    cp samples/jfk.wav /app/jfk.wav && \
+    cd ../ && rm -rf whisper
+
+FROM registry.access.redhat.com/ubi9-minimal:latest
+WORKDIR /app
+COPY --from=builder /app /app
+
+# https://github.com/wader/static-ffmpeg
+# https://hub.docker.com/r/mwader/static-ffmpeg/
+COPY --from=mwader/static-ffmpeg:6.1.1 /ffmpeg /bin/
+COPY --from=mwader/static-ffmpeg:6.1.1 /ffprobe /bin/
+
 COPY run.sh /app/
+ENV AUDIO_FILE=/app/jfk.wav
 ENTRYPOINT ["sh", "run.sh"]
