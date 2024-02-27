@@ -29,14 +29,14 @@ To convert your input audio files to 16-bit WAV format you can use `ffmpeg` like
 ffmpeg -i <input.mp3> -ar 16000 -ac 1 -c:a pcm_s16le <output.wav>
 ```
 
-The environment variable `AUDIO_FILE` can be passed to override the default `/app/jfk.wav` file within the whisper image.
+The environment variable `AUDIO_FILE`, can be passed with your own audio file to override the default `/app/jfk.wav` file within the whisper image.
 
 ### Deploy Model
 
 Deploy the LLM and volume mount the model of choice.
-Here we are mounting the `ggml-small.bin` modedl downloaded above.
+Here, we are mounting the `ggml-small.bin` model as downloaded from above.
 
-To test with the included `/app/jfk.wav` audio file:
+To test with the default `/app/jfk.wav` audio file included in the image:
 
 ```bash
 podman run --rm -it \
