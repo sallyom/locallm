@@ -1,9 +1,3 @@
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -16,6 +10,11 @@ import tempfile
 import streamlit as st
 import os
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, ConsoleSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 import socket
 
 def is_collector_running(host="localhost", port=4317):
@@ -25,19 +24,20 @@ def is_collector_running(host="localhost", port=4317):
     except (socket.timeout, ConnectionRefusedError):
         return False
 
+resource = Resource.create({"service.name": "rag-app"})
+provider = TracerProvider(resource=resource)
+
 if is_collector_running("localhost", 4317):
-    # OpenTelemetry configuration
-    provider = TracerProvider()
+    print("OpenTelemetry initialized: sending traces to localhost:4317")
     exporter = OTLPSpanExporter(endpoint="localhost:4317", insecure=True)
     span_processor = BatchSpanProcessor(exporter)
-    provider.add_span_processor(span_processor)
-    print("OpenTelemetry initialized: sending traces to localhost:4317")
 else:
-    # Fallback to ConsoleSpanExporter (or no-op)
-    provider = TracerProvider()
-    span_processor = SimpleSpanProcessor(ConsoleSpanExporter())
-    provider.add_span_processor(span_processor)
+    print("OpenTelemetry Collector not available. Falling back to ConsoleSpanExporter.")
+    exporter = ConsoleSpanExporter()
+    span_processor = SimpleSpanProcessor(exporter)
 
+provider.add_span_processor(span_processor)
+trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
 
 # Environment variables
